@@ -1,0 +1,24 @@
+# Dependencies and builds
+target/
+objdir*/
+node_modules/
+
+# Upstream engine source (managed by scripts, not committed directly)
+engine/
+mozilla-source/
+.mozbuild/
+
+# Temporary / scratch / downloaded installers
+*.exe
+*.msi
+*.zip
+*.tar.*
+scratch/
+tmp/
+.cache/
+
+# IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
