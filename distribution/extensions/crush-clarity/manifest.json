@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "name": "Crush ASR Clarity Engine",
+  "version": "1.1.0",
+  "description": "Native WebRender GPU-accelerated video enhancement and in-player floating controls for Crush Sovereign Browser",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "crush-clarity@crush.browser"
+    }
+  },
+  "permissions": [
+    "<all_urls>",
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "asr_pipeline.js",
+        "clarity_overlay.js"
+      ],
+      "css": [
+        "clarity_hud.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

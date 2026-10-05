@@ -4,9 +4,12 @@ objdir*/
 node_modules/
 
 # Upstream engine source (managed by scripts, not committed directly)
-engine/
+engine/*
+!engine/mozconfig.nuclear
 mozilla-source/
 .mozbuild/
+ui/dist/
+ui/node_modules/
 
 # Temporary / scratch / downloaded installers
 *.exe
@@ -22,3 +25,6 @@ tmp/
 .idea/
 Thumbs.db
 Desktop.ini
+
+# Firefox runtime profile data (cookies, storage, sqlite, caches)
+sandbox/**/profile/

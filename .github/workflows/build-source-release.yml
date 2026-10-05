@@ -1,0 +1,131 @@
+name: Crush Nuclear Source Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag (e.g. v0.2.0-nuclear)'
+        required: false
+        default: 'v0.2.0-nuclear'
+
+permissions:
+  contents: write
+
+jobs:
+  build-source-windows:
+    name: Windows x64 Full C++/Rust Source Build
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: x86_64-pc-windows-msvc
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install MozillaBuild & Tools
+        shell: powershell
+        run: |
+          Write-Host "[*] Setting up MozillaBuild..."
+          $mbUrl = "https://ftp.mozilla.org/pub/mozilla/libraries/win32/MozillaBuildSetup-4.2.1.exe"
+          $mbInstaller = "$env:TEMP\MozillaBuildSetup.exe"
+          curl.exe -L -o $mbInstaller $mbUrl
+          & 'C:\Program Files\7-Zip\7z.exe' x -y -oC:\mozilla-build $mbInstaller
+          
+          Write-Host "[*] Installing GNU Make..."
+          $makeUrl = "https://downloads.sourceforge.net/project/ezwinports/make-4.4.1-without-guile-w32-bin.zip"
+          $makeZip = "$env:TEMP\make-4.4.1.zip"
+          curl.exe -L -o $makeZip $makeUrl
+          & 'C:\Program Files\7-Zip\7z.exe' e -y -o"C:\mozilla-build\bin" $makeZip "bin\make.exe"
+          Copy-Item "C:\mozilla-build\bin\make.exe" "C:\mozilla-build\bin\mozmake.exe" -Force
+
+      - name: Sync Gecko Engine Source
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\sync-engine.ps1 -Version "157.0"
+
+      - name: Configure Nuclear Debloat Mozconfig
+        shell: powershell
+        run: |
+          Copy-Item scripts\mozconfig.nuclear engine\mozconfig -Force
+          Get-Content engine\mozconfig
+
+      - name: Build Rust UDM Subsystem
+        shell: powershell
+        run: |
+          cargo build --release --manifest-path sandbox/s4_udm_ipc_stub/Cargo.toml
+          cargo test --release --manifest-path sandbox/s4_udm_ipc_stub/Cargo.toml
+
+      - name: Build Crush UI & Extension Bundles
+        shell: powershell
+        run: |
+          Push-Location ui
+          npm ci
+          npm run build
+          Pop-Location
+          powershell -ExecutionPolicy Bypass -File .\scripts\sync-extensions.ps1
+
+      - name: Execute Full Source Mach Build
+        shell: powershell
+        run: |
+          $env:MOZILLABUILD = "C:\mozilla-build"
+          $env:DISABLE_TELEMETRY = "1"
+          $env:MOZ_AUTOMATION = "1"
+          $env:MSYS2_PATH_TYPE = "inherit"
+          $pythonExe = "C:\mozilla-build\python3\python3.exe"
+          $machScript = "engine\mach"
+          Push-Location engine
+          & $pythonExe $machScript build
+          Pop-Location
+
+      - name: Package Nuclear Release Bundle
+        id: package
+        shell: powershell
+        run: |
+          $distBin = "engine\objdir-crush-nuclear\dist\bin"
+          $stagingDir = "staging\crush-nuclear-windows-x64"
+
+          New-Item -ItemType Directory -Path $stagingDir -Force
+          Copy-Item -Path "$distBin\*" -Destination $stagingDir -Recurse -Force
+
+          # Deploy UDM Binaries & Distribution Assets
+          $udmBinDir = "$stagingDir\distribution\bin"
+          New-Item -ItemType Directory -Path $udmBinDir -Force
+          Copy-Item "sandbox\s4_udm_ipc_stub\target\release\udm-daemon.exe" "$udmBinDir\udm-daemon.exe" -Force
+          Copy-Item "sandbox\s4_udm_ipc_stub\target\release\udm-bridge.exe" "$udmBinDir\udm-bridge.exe" -Force
+          if (Test-Path "distribution") {
+            Copy-Item -Path "distribution\*" -Destination "$stagingDir\distribution" -Recurse -Force
+          }
+
+          $archivePath = "crush-nuclear-windows-x64.zip"
+          & 'C:\Program Files\7-Zip\7z.exe' a -tzip $archivePath ".\$stagingDir\*"
+          
+          $tag = "${{ github.event.inputs.release_tag }}"
+          echo "ARCHIVE_PATH=$archivePath" >> $env:GITHUB_ENV
+          echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crush-nuclear-windows-x64
+          path: ${{ env.ARCHIVE_PATH }}
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: ${{ env.ARCHIVE_PATH }}
+          generate_release_notes: true

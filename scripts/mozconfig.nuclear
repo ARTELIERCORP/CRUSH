@@ -1,0 +1,32 @@
+# ==============================================================================
+# CRUSH SOVEREIGN BROWSER - NUCLEAR DEBLOAT COMPILE SPECIFICATION
+# Target: Windows x64 Native C++/Rust Build via GitHub Actions
+# ==============================================================================
+
+# 1. Permanent Removal of Mozilla Corporate Telemetry & Surveillance
+export MOZ_TELEMETRY_REPORTING=0
+ac_add_options --disable-telemetry
+ac_add_options --disable-crashreporter
+ac_add_options --disable-updater
+ac_add_options --disable-maintenance-service
+ac_add_options --disable-default-browser-agent
+ac_add_options --disable-parental-controls
+ac_add_options --disable-geckodriver
+
+# 2. Rip Out Unused Heavy Background Subsystems
+ac_add_options --disable-accessibility
+ac_add_options --disable-synth-speechd
+ac_add_options --disable-webspeech
+ac_add_options --disable-tests
+ac_add_options --disable-debug
+
+# 3. Maximum Speed & Hardware Optimization
+ac_add_options --enable-optimize="-O3"
+ac_add_options --enable-lto=thin
+ac_add_options --enable-rust-simd
+ac_add_options --enable-webrender
+ac_add_options --enable-release
+ac_add_options --enable-strip
+
+# 4. Target Output
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/objdir-crush-nuclear

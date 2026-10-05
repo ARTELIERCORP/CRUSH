@@ -1,0 +1,28 @@
+{
+  "name": "crush-browser-ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:ui": "vite build",
+    "build:extension": "esbuild src/extension/asr_pipeline.ts --bundle --format=iife --minify --outfile=../distribution/extensions/crush-clarity/asr_pipeline.js && esbuild src/extension/clarity_overlay.tsx --bundle --format=iife --minify --define:process.env.NODE_ENV=\\\"production\\\" --outfile=../distribution/extensions/crush-clarity/clarity_overlay.js && esbuild src/extension/clarity_hud.css --minify --outfile=../distribution/extensions/crush-clarity/clarity_hud.css",
+    "build": "tsc && npm run build:ui && npm run build:extension",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.1"
+  }
+}

@@ -1,0 +1,110 @@
+name: Crush Browser Release Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag (e.g. v0.1.0-alpha)'
+        required: false
+        default: 'v0.1.0-alpha'
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Windows x64 Build & Package
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: x86_64-pc-windows-msvc
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MozillaBuild & Dependencies
+        shell: powershell
+        run: |
+          Write-Host "[*] Setting up MozillaBuild..."
+          $mbUrl = "https://ftp.mozilla.org/pub/mozilla/libraries/win32/MozillaBuildSetup-4.2.1.exe"
+          $mbInstaller = "$env:TEMP\MozillaBuildSetup.exe"
+          curl.exe -L -o $mbInstaller $mbUrl
+          & 'C:\Program Files\7-Zip\7z.exe' x -y -oC:\mozilla-build $mbInstaller
+          
+          Write-Host "[*] Installing GNU Make..."
+          $makeUrl = "https://downloads.sourceforge.net/project/ezwinports/make-4.4.1-without-guile-w32-bin.zip"
+          $makeZip = "$env:TEMP\make-4.4.1.zip"
+          curl.exe -L -o $makeZip $makeUrl
+          & 'C:\Program Files\7-Zip\7z.exe' e -y -o"C:\mozilla-build\bin" $makeZip "bin\make.exe"
+          Copy-Item "C:\mozilla-build\bin\make.exe" "C:\mozilla-build\bin\mozmake.exe" -Force
+
+      - name: Cache Engine Source & Artifact Binaries
+        id: cache-engine
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.TEMP }}\target.zip
+            ${{ env.TEMP }}\firefox-157.0.source.tar.xz
+          key: crush-engine-artifacts-157.0
+
+      - name: Sync Gecko Engine
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\sync-engine.ps1 -Version "157.0"
+
+      - name: Build Rust UDM Subsystem
+        shell: powershell
+        run: |
+          Write-Host "[*] Compiling UDM Daemon and Bridge in Release mode..."
+          cargo build --release --manifest-path sandbox/s4_udm_ipc_stub/Cargo.toml
+          cargo test --release --manifest-path sandbox/s4_udm_ipc_stub/Cargo.toml
+
+      - name: Execute Artifact Build
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
+
+      - name: Package Distributable Bundle
+        id: package
+        shell: powershell
+        run: |
+          $distBin = "engine\objdir-crush\dist\bin"
+          $udmTarget = "sandbox\s4_udm_ipc_stub\target\release"
+          $stagingDir = "staging\crush-windows-x64"
+
+          New-Item -ItemType Directory -Path $stagingDir -Force
+          Copy-Item -Path "$distBin\*" -Destination $stagingDir -Recurse -Force
+          Copy-Item -Path "$udmTarget\udm-bridge.exe" -Destination $stagingDir -Force
+          Copy-Item -Path "$udmTarget\udm-daemon.exe" -Destination $stagingDir -Force
+
+          $archivePath = "crush-browser-windows-x64.zip"
+          & 'C:\Program Files\7-Zip\7z.exe' a -tzip $archivePath ".\$stagingDir\*"
+          
+          $tag = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "${{ github.event.inputs.release_tag }}" }
+          echo "ARCHIVE_PATH=$archivePath" >> $env:GITHUB_ENV
+          echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crush-browser-windows-x64
+          path: ${{ env.ARCHIVE_PATH }}
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: ${{ env.ARCHIVE_PATH }}
+          generate_release_notes: true

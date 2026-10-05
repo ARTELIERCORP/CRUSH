@@ -24,6 +24,9 @@ Verify the fast, zero-C++ local development loop on the Windows 11 host using Mo
 - `./mach run` successfully spawns the browser window.
 
 ## Measured Results
-- Status: In progress (bootstrapping prerequisites).
-- Build time: TODO_MEASURE
-- Disk consumption: TODO_MEASURE
+- Status: VERIFIED (Level L2)
+- Build command: `powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1`
+- Build time: 68.1s (Wall time: 67s, CPU: 44%, 12 parallel jobs)
+- C++ Compiling: 0 lines (All engine binaries fetched via Mozilla Taskcluster artifact pipeline `target.zip`)
+- Object directory disk consumption: 439.3 MB (`engine/objdir-crush`)
+- Output binary: `engine/objdir-crush/dist/bin/firefox.exe` (v157.0 x86_64)

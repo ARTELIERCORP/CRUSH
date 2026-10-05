@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "crates/udm-proto",
+    "crates/udm-bridge",
+    "crates/udm-daemon",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Aryan"]
+license = "Proprietary"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.38", features = ["full"] }
+windows-sys = { version = "0.52", features = ["Win32_System_Pipes", "Win32_Storage_FileSystem", "Win32_Foundation", "Win32_Security"] }
+udm-proto = { path = "crates/udm-proto" }
