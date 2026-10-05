@@ -576,10 +576,16 @@
 - **Fix class**: ROOT-CAUSE. Connected previously disconnected source sync steps in the cloud workflow and ensured `mozconfig.nuclear` is tracked in git.
 - **Decisions**:
   - Keep `scripts/mozconfig.nuclear` as the tracked git source of truth and copy it to `engine/mozconfig` during cloud build execution.
-- **Follow-ups**: Push commits to GitHub and trigger workflow run.
+- **Follow-ups**: Configure remote origin and trigger GitHub Actions cloud build.
 
-
-
-
-
-
+## 2026-10-05 — Release: Repository Staging, Hygiene & Commit Verification
+- **Task**: Stage all debloat, UI, extension, workflow, and engine files, sanitize git boundaries, and commit repository state for GitHub cloud build.
+- **Change**:
+  - Unstaged over 3,000 runtime browser profile cache and IndexedDB files inadvertently captured from `sandbox/s3_google_signin_drm/profile/`.
+  - Hardened `.gitignore` to permanently ignore runtime profile caches (`sandbox/**/profile/`).
+  - Staged 65 clean project files across `.github/workflows/`, `scripts/`, `distribution/`, `ui/`, `sandbox/s4_udm_ipc_stub/`, and documentation.
+  - Executed git commit `39dec75`: "feat: complete nuclear debloat engine, unified D3D11 pipeline, and Rust UDM packaging" (65 files changed, 7793 insertions).
+- **Verification level**: Level L2 (Verified clean working tree with `git status`; verified commit `39dec75` recorded in `git log`).
+- **Fix class**: ROOT-CAUSE. Prevented binary session database leaks and repo bloat by isolating runtime profile files in `.gitignore` before creating the master release commit.
+- **Decisions**: Keep runtime sandbox profile state out of git while versioning all scripts and configs.
+- **Follow-ups**: Bind GitHub remote origin and execute `git push origin master`.
