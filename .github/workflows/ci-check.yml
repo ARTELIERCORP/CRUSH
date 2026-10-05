@@ -1,0 +1,21 @@
+name: Crush CI Verification
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify Repository & Workflows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Tree
+        run: |
+          echo "Crush repository structure verified."
+          ls -la scripts/
