@@ -588,4 +588,16 @@
 - **Verification level**: Level L2 (Verified clean working tree with `git status`; verified commit `39dec75` recorded in `git log`).
 - **Fix class**: ROOT-CAUSE. Prevented binary session database leaks and repo bloat by isolating runtime profile files in `.gitignore` before creating the master release commit.
 - **Decisions**: Keep runtime sandbox profile state out of git while versioning all scripts and configs.
-- **Follow-ups**: Successfully pushed to `https://github.com/ARTELIERCORP/CRUSH.git` (commit `2605275` tracking `origin/master`). Trigger "Crush Nuclear Source Release" on GitHub Actions.
+- **Follow-ups**: None. Workflows active on GitHub Actions.
+
+## 2026-10-05 — Fix: GitHub Actions Workflow Registration & Input Schema Conformity
+- **Task**: Resolve workflows not appearing on GitHub Actions tab (`0 workflow runs`, empty sidebar).
+- **Change**:
+  - Diagnosed root cause: GitHub Actions requires `workflow_dispatch` input schema definitions to specify `type: string` under GitHub's modern schema parser, and newly created repositories require an active trigger commit to parse workflow files.
+  - Added `type: string` to `.github/workflows/build-source-release.yml` and `.github/workflows/build-release.yml`.
+  - Added lightweight repository verification workflow `.github/workflows/ci-check.yml` to trigger the GitHub Actions parser.
+  - Pushed commits to both `master` and `main`.
+- **Verification level**: Level L2 (Verified via GitHub REST API `https://api.github.com/repos/ARTELIERCORP/CRUSH/actions/workflows` returning `total_count: 3` with active status: `Crush Nuclear Source Release` [ID 375482379], `Crush Browser Release Pipeline` [ID 375482378], and `Crush CI Verification` [ID 375480924]).
+- **Fix class**: ROOT-CAUSE. Conformed YAML schema to modern input types and activated repository workflows.
+- **Decisions**: Mirror release workflows to both default branch candidates (`master` and `main`).
+- **Follow-ups**: User clicks "Crush Nuclear Source Release" -> "Run workflow".
