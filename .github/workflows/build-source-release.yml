@@ -7,6 +7,7 @@ on:
         description: 'Release Tag (e.g. v0.2.0-nuclear)'
         required: false
         default: 'v0.2.0-nuclear'
+        type: string
 
 permissions:
   contents: write
