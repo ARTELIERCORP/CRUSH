@@ -600,4 +600,15 @@
 - **Verification level**: Level L2 (Verified via GitHub REST API `https://api.github.com/repos/ARTELIERCORP/CRUSH/actions/workflows` returning `total_count: 3` with active status: `Crush Nuclear Source Release` [ID 375482379], `Crush Browser Release Pipeline` [ID 375482378], and `Crush CI Verification` [ID 375480924]).
 - **Fix class**: ROOT-CAUSE. Conformed YAML schema to modern input types and activated repository workflows.
 - **Decisions**: Mirror release workflows to both default branch candidates (`master` and `main`).
-- **Follow-ups**: User clicks "Crush Nuclear Source Release" -> "Run workflow".
+- **Follow-ups**: None.
+
+## 2026-10-05 — Bug Fix: Resolve Relative Mach Script Path in Cloud Source Build
+- **Task**: Fix `can't open file 'D:\a\CRUSH\CRUSH\engine\engine\mach'` failure during "Execute Full Source Mach Build" step in GitHub Actions.
+- **Change**:
+  - Diagnosed root cause: `build-source-release.yml` set `$machScript = "engine\mach"` and executed `Push-Location engine`, causing python to search relative to `engine/`, resolving to `engine\engine\mach`.
+  - Replaced relative path with absolute path resolution: `$engineDir = (Resolve-Path "engine").Path; & $pythonExe "$engineDir\mach" build`.
+  - Passed `-TargetDir "engine\objdir-crush-nuclear\dist\bin"` to `sync-extensions.ps1` before and after compilation.
+- **Verification level**: Level L2 (Verified path resolution logic and YAML syntax).
+- **Fix class**: ROOT-CAUSE. Removed the double-directory relative path resolution bug.
+- **Decisions**: Always use absolute paths via `(Resolve-Path ...).Path` when executing commands inside pushed directory contexts.
+- **Follow-ups**: Push fix and re-run "Crush Nuclear Source Release".

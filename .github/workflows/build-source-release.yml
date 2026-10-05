@@ -76,7 +76,7 @@ jobs:
           npm ci
           npm run build
           Pop-Location
-          powershell -ExecutionPolicy Bypass -File .\scripts\sync-extensions.ps1
+          powershell -ExecutionPolicy Bypass -File .\scripts\sync-extensions.ps1 -TargetDir "engine\objdir-crush-nuclear\dist\bin"
 
       - name: Execute Full Source Mach Build
         shell: powershell
@@ -86,18 +86,22 @@ jobs:
           $env:MOZ_AUTOMATION = "1"
           $env:MSYS2_PATH_TYPE = "inherit"
           $pythonExe = "C:\mozilla-build\python3\python3.exe"
-          $machScript = "engine\mach"
-          Push-Location engine
-          & $pythonExe $machScript build
-          Pop-Location
+          $engineDir = (Resolve-Path "engine").Path
+          Push-Location $engineDir
+          try {
+            & $pythonExe "$engineDir\mach" build
+          } finally {
+            Pop-Location
+          }
 
       - name: Package Nuclear Release Bundle
         id: package
         shell: powershell
         run: |
           $distBin = "engine\objdir-crush-nuclear\dist\bin"
-          $stagingDir = "staging\crush-nuclear-windows-x64"
+          powershell -ExecutionPolicy Bypass -File .\scripts\sync-extensions.ps1 -TargetDir $distBin
 
+          $stagingDir = "staging\crush-nuclear-windows-x64"
           New-Item -ItemType Directory -Path $stagingDir -Force
           Copy-Item -Path "$distBin\*" -Destination $stagingDir -Recurse -Force
 
