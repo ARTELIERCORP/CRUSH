@@ -588,4 +588,4 @@
 - **Verification level**: Level L2 (Verified clean working tree with `git status`; verified commit `39dec75` recorded in `git log`).
 - **Fix class**: ROOT-CAUSE. Prevented binary session database leaks and repo bloat by isolating runtime profile files in `.gitignore` before creating the master release commit.
 - **Decisions**: Keep runtime sandbox profile state out of git while versioning all scripts and configs.
-- **Follow-ups**: Bind GitHub remote origin and execute `git push origin master`.
+- **Follow-ups**: Successfully pushed to `https://github.com/ARTELIERCORP/CRUSH.git` (commit `2605275` tracking `origin/master`). Trigger "Crush Nuclear Source Release" on GitHub Actions.
