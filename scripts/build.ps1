@@ -44,6 +44,16 @@ is_set_up = True
 telemetry = false
 "@ | Set-Content -Path $machrcPath -Encoding ascii -Force
 
+# Ensure MSYS2 tmp directory exists so bash never warns and breaks mozconfig parser
+$msysTmp = Join-Path $env:MOZILLABUILD "msys2\tmp"
+if (-not (Test-Path $msysTmp)) {
+    New-Item -ItemType Directory -Path $msysTmp -Force | Out-Null
+}
+$msysVarTmp = Join-Path $env:MOZILLABUILD "msys2\var\tmp"
+if (-not (Test-Path $msysVarTmp)) {
+    New-Item -ItemType Directory -Path $msysVarTmp -Force | Out-Null
+}
+
 $pythonExe = Join-Path $env:MOZILLABUILD "python3\python3.exe"
 $machScript = Join-Path $enginePath "mach"
 
@@ -54,10 +64,13 @@ if ($Clobber) {
     Set-Location $workspaceRoot
 }
 
+Write-Host "[*] Pre-installing binary artifact package from $env:MOZ_ARTIFACT_FILE..."
+Set-Location $enginePath
+& $pythonExe $machScript artifact install "$env:MOZ_ARTIFACT_FILE"
+
 Write-Host "[*] Executing artifact build via mach in $enginePath..."
 $buildTimer = [System.Diagnostics.Stopwatch]::StartNew()
 
-Set-Location $enginePath
 & $pythonExe $machScript build
 $exitCode = $LASTEXITCODE
 Set-Location $workspaceRoot

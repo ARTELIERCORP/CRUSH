@@ -19,6 +19,7 @@ jobs:
   build-windows:
     name: Windows x64 Build & Package
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -42,6 +43,9 @@ jobs:
           curl.exe -L -o $mbInstaller $mbUrl
           & 'C:\Program Files\7-Zip\7z.exe' x -y -oC:\mozilla-build $mbInstaller
           
+          Write-Host "[*] Creating MSYS2 temp directories..."
+          New-Item -ItemType Directory -Path "C:\mozilla-build\msys2\tmp", "C:\mozilla-build\msys2\var\tmp" -Force | Out-Null
+
           Write-Host "[*] Installing GNU Make..."
           $makeUrl = "https://downloads.sourceforge.net/project/ezwinports/make-4.4.1-without-guile-w32-bin.zip"
           $makeZip = "$env:TEMP\make-4.4.1.zip"

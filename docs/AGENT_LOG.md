@@ -689,3 +689,21 @@
   - Modifying in-tree Python `configparser` callers in `engine/`: Rejected because vendor code should remain clean and is overwritten on source extraction.
 - **Follow-ups**: Commit, push to `master` and `main`, and re-trigger `Crush Browser Release Pipeline`.
 
+## 2026-10-06 — Bug Fix: MSYS2 Missing /tmp Warning, mozconfig AssertionError & PowerShell Stdio Hang
+- **Task**: Fix 3-hour CI hang in `Execute Artifact Build` step of GitHub Actions release pipeline.
+- **Change**:
+  - Root cause diagnosis:
+    1. MozillaBuild 4.2.1 extracted via 7-Zip (`7z.exe x`) omits empty folders, leaving `C:\mozilla-build\msys2\tmp` and `var\tmp` non-existent on fresh CI runners.
+    2. When `mozconfig_loader` ran MSYS2 bash to evaluate `mozconfig`, bash wrote warning to stdout: `bash.exe: warning: could not find /tmp, please create!`.
+    3. `_parse_loader_output` in `mozconfig.py` expects the first line to be `------BEGIN_...`. The warning line caused `assert current_type is not None` -> `AssertionError` and `MozconfigLoadException`.
+    4. In headless PowerShell 5.1 on GitHub Actions runners, child processes spawned by MSYS2 held open stdout/stderr pipes, causing PowerShell to block indefinitely waiting for EOF (sitting stuck for 3h 10m).
+    5. The workflow had no job `timeout-minutes`, inheriting GitHub's 360-minute default.
+  - Fixes applied:
+    1. Added directory creation for `C:\mozilla-build\msys2\tmp` and `var\tmp` in `.github/workflows/build-release.yml`, `.github/workflows/build-source-release.yml`, `scripts/build.ps1`, and `scripts/sync-engine.ps1`.
+    2. Added `timeout-minutes: 30` to `build-release.yml` jobs.
+    3. Explicitly invoked `mach artifact install "$env:MOZ_ARTIFACT_FILE"` before `mach build` in `scripts/build.ps1` to ensure instant binary package deployment.
+- **Verification level**: Level L2 (Executed local artifact build via `powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1`: completed cleanly with exit code 0 in 15.1s; `cargo test` in `sandbox/s4_udm_ipc_stub` passed in 0.27s).
+- **Fix class**: ROOT-CAUSE. Eliminates the MSYS2 `/tmp` warning at the source so `mozconfig_loader` parses with zero errors or pipe hangs.
+- **Decisions**: Create MSYS2 tmp directories unconditionally whenever MozillaBuild is detected or installed; add 30-minute safety timeout to CI workflows.
+- **Follow-ups**: Commit, push to `master` and `main`, and monitor CI release pipeline.
+

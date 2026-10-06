@@ -77,6 +77,12 @@ is_set_up = True
 telemetry = false
 "@ | Set-Content -Path $machrcPath -Encoding ascii -Force
 
+# Ensure MSYS2 tmp directory exists so bash never warns and breaks mozconfig parser
+$mbPath = if ($env:MOZILLABUILD) { $env:MOZILLABUILD } else { "C:\mozilla-build" }
+if (Test-Path $mbPath) {
+    New-Item -ItemType Directory -Path (Join-Path $mbPath "msys2\tmp"), (Join-Path $mbPath "msys2\var\tmp") -Force | Out-Null
+}
+
 $machPath = Join-Path $enginePath "mach"
 if (Test-Path $machPath) {
     Write-Host "[SUCCESS] Mach entrypoint verified at $machPath"
