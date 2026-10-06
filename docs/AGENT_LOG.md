@@ -612,3 +612,17 @@
 - **Fix class**: ROOT-CAUSE. Removed the double-directory relative path resolution bug.
 - **Decisions**: Always use absolute paths via `(Resolve-Path ...).Path` when executing commands inside pushed directory contexts.
 - **Follow-ups**: Push fix and re-run "Crush Nuclear Source Release".
+
+## 2026-10-06 — Fix: Prevent PowerShell Debugger Hang, Add sccache, Rust SIMD & Binary Branding
+- **Task**: Diagnose and fix 6-hour timeout in GitHub Actions source build run #2, configure nuclear debloat optimizations (Rust SIMD, binary branding, ripped subsystems), and commit/push changes.
+- **Change**:
+  - Root cause diagnosis: In workflow run #2 at line 862, PowerShell executed `Pop-Location` inside a `try...finally` block, triggering an unhandled exception and trapping into an interactive PowerShell debugger prompt (`[DBG]: PS ...>>`). In a headless CI environment with no stdin, the runner froze waiting for user input until GitHub's 360-minute limit canceled the job.
+  - Replaced PowerShell runner in "Execute Full Source Mach Build" with `shell: cmd` calling `C:\mozilla-build\start-shell.bat -no-start -defterm -c "cd engine && ./mach build"`, setting `MSYS2_PATH_TYPE=inherit` to preserve system paths.
+  - Added `mozilla-actions/sccache-action@v0.0.5` and configured `--with-ccache=sccache` in `scripts/mozconfig.nuclear` for compiler caching.
+  - Updated `scripts/mozconfig.nuclear` with native binary identity (`--with-app-name=crush`, `--with-app-basename=Crush`), Rust SIMD (`--enable-rust-simd`), WASM SIMD (`--enable-wasm-simd`), hardware GPU compositor (`--enable-webrender`), ThinLTO (`--enable-lto=thin`), and ripped out unused subsystems (`--disable-accessibility`, `--disable-synth-speech`, `--disable-webspeech`, `--disable-gamepad`).
+- **Verification level**: Level L2 (Local real-path verification: YAML schema validated, mozconfig syntax verified, git status and diff verified).
+- **Fix class**: ROOT-CAUSE. Eliminates the interactive PowerShell debugger trap by invoking Mozilla's official batch runner under `cmd.exe` and configures compiler caching.
+- **Decisions**:
+  - Use `start-shell.bat` directly via `cmd.exe` rather than nested PowerShell invocation to match MozillaBuild's supported execution model.
+  - Add `MSYS2_PATH_TYPE=inherit` so tools installed by GitHub Actions (`sccache`, `python`, `rustc`) are available inside the MSYS2 environment.
+- **Follow-ups**: Trigger workflow run #3 on GitHub Actions.
