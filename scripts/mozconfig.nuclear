@@ -7,9 +7,7 @@
 ac_add_options --with-app-name=crush
 ac_add_options --with-app-basename=Crush
 
-# 2. Permanent Removal of Mozilla Corporate Telemetry & Surveillance
-export MOZ_TELEMETRY_REPORTING=0
-ac_add_options --disable-telemetry
+# 2. Permanent Removal of Mozilla Corporate Telemetry & Diagnostic Baggage
 ac_add_options --disable-crashreporter
 ac_add_options --disable-updater
 ac_add_options --disable-maintenance-service
@@ -19,18 +17,15 @@ ac_add_options --disable-geckodriver
 
 # 3. Rip Out Heavy Unused Subsystems (Saves ~400MB RAM & Compile Time)
 ac_add_options --disable-accessibility
-ac_add_options --disable-synth-speech
+ac_add_options --disable-synth-speechd
 ac_add_options --disable-webspeech
-ac_add_options --disable-gamepad
 ac_add_options --disable-tests
 ac_add_options --disable-debug
 
-# 4. Maximum Speed & Hardware GPU Acceleration
+# 4. Maximum Speed & Vector Math
 ac_add_options --enable-optimize="-O3"
 ac_add_options --enable-lto=thin
 ac_add_options --enable-rust-simd
-ac_add_options --enable-wasm-simd
-ac_add_options --enable-webrender
 ac_add_options --enable-release
 ac_add_options --enable-strip
 

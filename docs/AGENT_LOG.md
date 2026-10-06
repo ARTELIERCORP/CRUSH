@@ -637,3 +637,20 @@
 - **Fix class**: ROOT-CAUSE. Enforces MSYS2 working directory retention across drive boundaries (`D:`) via native `CHERE_INVOKING=1` and `-here` parameters.
 - **Decisions**: CD directly into `%GITHUB_WORKSPACE%\engine` before invoking `start-shell.bat -here` so the shell environment never attempts relative navigation.
 - **Follow-ups**: Commit, push to `master` and `main`, and re-trigger workflow.
+
+## 2026-10-06 — Fix: Sanitize mozconfig.nuclear to Valid Gecko Configure Options
+- **Task**: Audit and sanitize `scripts/mozconfig.nuclear` against actual Gecko configure option definitions to prevent downstream `InvalidOptionError` crashes during `./mach build`.
+- **Change**:
+  - Tested `scripts/mozconfig.nuclear` locally against `./mach configure`.
+  - Discovered and removed hallucinated/invalid configure options that caused immediate Python exceptions:
+    1. `MOZ_TELEMETRY_REPORTING=0` (takes 0 values in configure).
+    2. `--disable-telemetry` (unknown option in modern Gecko; telemetry is off in unofficial builds).
+    3. `--disable-synth-speech` (corrected to valid Gecko flag `--disable-synth-speechd`).
+    4. `--disable-gamepad` (unknown configure option; gamepad is toggled via runtime prefs).
+    5. `--enable-wasm-simd` (unknown configure option; WASM SIMD is enabled by default in engine).
+    6. `--enable-webrender` (unknown configure option; WebRender is the sole renderer).
+  - Validated that all remaining flags (`--with-app-name=crush`, `--with-app-basename=Crush`, `--disable-crashreporter`, `--disable-updater`, `--disable-maintenance-service`, `--disable-default-browser-agent`, `--disable-parental-controls`, `--disable-geckodriver`, `--disable-accessibility`, `--disable-synth-speechd`, `--disable-webspeech`, `--disable-tests`, `--disable-debug`, `--enable-optimize=-O3`, `--enable-lto=thin`, `--enable-rust-simd`, `--enable-release`, `--enable-strip`, `--with-ccache=sccache`) pass configure parsing without errors.
+- **Verification level**: Level L2 (Executed `./mach configure` with sanitized mozconfig, verified all options are parsed and accepted without any `InvalidOptionError`).
+- **Fix class**: ROOT-CAUSE. Replaced hallucinated configure flags with verified in-tree options supported by Gecko 157.
+- **Decisions**: Strip non-existent configure options so the build system never aborts before compilation.
+- **Follow-ups**: Commit, push to `master` and `main`, and inform user.
