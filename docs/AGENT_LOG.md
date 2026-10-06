@@ -707,3 +707,24 @@
 - **Decisions**: Create MSYS2 tmp directories unconditionally whenever MozillaBuild is detected or installed; add 30-minute safety timeout to CI workflows.
 - **Follow-ups**: Commit, push to `master` and `main`, and monitor CI release pipeline.
 
+## 2026-10-06 — Bug Fix: Tarball Artifact Build ValueError (hg/git) & Premature Configure Dependency
+- **Task**: Fix `ValueError: Must provide path to exactly one of hg and git` and premature `artifact install` in CI release pipeline.
+- **Change**:
+  - Root cause diagnosis:
+    1. `engine/` is extracted on CI from the Mozilla source tarball without `.git` (and is ignored by root `.gitignore`).
+    2. When `mach build` runs `client.mk`, `recurse_artifact` invokes `mach artifact install --no-tests`.
+    3. Without `.git`, `conditions.is_git` returns `False`, leaving both `hg` and `git` `None`.
+    4. `Artifacts.__init__` in `artifacts.py` asserts `if (hg and git) or (not hg and not git): raise ValueError(...)`.
+    5. In `build.ps1`, running `mach artifact install` before `mach build` threw `BuildEnvironmentNotFoundException: config.status not available` because configure had not run yet.
+    6. In `.github/workflows/build-release.yml`, the cache path used `${{ env.TEMP }}` which evaluated to empty string instead of `${{ runner.temp }}`.
+  - Fixes applied:
+    1. In `scripts/sync-engine.ps1`, initialized git in `$enginePath` (`git -C $enginePath init -q`) so Gecko's VCS detection recognizes the tree.
+    2. In `scripts/sync-engine.ps1`, patched `artifacts.py` and `artifact_commands.py` with `git = which("git") or "git"` fallback for tarball extractions.
+    3. In `scripts/build.ps1`, removed premature `artifact install` before `mach build` so `mach build` configures the objdir first and then unpacks `target.zip` via `recurse_artifact` from `$env:MOZ_ARTIFACT_FILE`.
+    4. In `.github/workflows/build-release.yml`, fixed cache path to `${{ runner.temp }}`.
+    5. In `.gitignore`, ignored `engine/` directly to avoid untracked nested repository warnings.
+- **Verification level**: Level L2 (Local real-path executions: `sync-engine.ps1` completed cleanly; `build.ps1` completed with exit code 0 in 28.9s; `cargo test` in `sandbox/s4_udm_ipc_stub` passed in 0.28s; `git status` clean).
+- **Fix class**: ROOT-CAUSE. Guarantees Gecko VCS detection and git fallback exist on freshly extracted tarballs, and aligns artifact installation lifecycle with `mach build`.
+- **Decisions**: Perform in-tree tarball patching inside `sync-engine.ps1` so clean CI extractions always have necessary build adjustments.
+- **Follow-ups**: Commit, push to `master` and `main`, and re-trigger `Crush Browser Release Pipeline`.
+

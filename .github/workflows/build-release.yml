@@ -58,8 +58,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.TEMP }}\target.zip
-            ${{ env.TEMP }}\firefox-157.0.source.tar.xz
+            ${{ runner.temp }}\target.zip
+            ${{ runner.temp }}\firefox-157.0.source.tar.xz
           key: crush-engine-artifacts-157.0
 
       - name: Sync Gecko Engine

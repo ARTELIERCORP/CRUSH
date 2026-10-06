@@ -83,6 +83,35 @@ if (Test-Path $mbPath) {
     New-Item -ItemType Directory -Path (Join-Path $mbPath "msys2\tmp"), (Join-Path $mbPath "msys2\var\tmp") -Force | Out-Null
 }
 
+# Ensure Gecko VCS detection identifies engine as a Git repository
+if (-not (Test-Path (Join-Path $enginePath ".git"))) {
+    Write-Host "[*] Initializing git repository in $enginePath for artifact VCS discovery..."
+    git -C $enginePath init -q
+    git -C $enginePath config user.name "Crush CI"
+    git -C $enginePath config user.email "ci@crush.browser"
+}
+
+# Patch artifacts.py and artifact_commands.py for decoupled tarball trees
+$artifactsPy = Join-Path $enginePath "python\mozbuild\mozbuild\artifacts.py"
+if (Test-Path $artifactsPy) {
+    $content = Get-Content $artifactsPy -Raw
+    if ($content -notmatch "git = which\(`"git`"\)") {
+        $content = $content -replace 'if \(hg and git\) or \(not hg and not git\):', "if not hg and not git:`n            from mozfile import which`n            git = which(`"git`") or `"git`"`n        if (hg and git) or (not hg and not git):"
+        Set-Content -Path $artifactsPy -Value $content -Encoding ascii -Force
+        Write-Host "[OK] Patched artifacts.py with git fallback"
+    }
+}
+
+$artifactCmdsPy = Join-Path $enginePath "python\mozbuild\mozbuild\artifact_commands.py"
+if (Test-Path $artifactCmdsPy) {
+    $content = Get-Content $artifactCmdsPy -Raw
+    if ($content -notmatch "git = which\(`"git`"\)") {
+        $content = $content -replace 'topsrcdir = command_context\.substs\.get', "if not hg and not git:`n        from mozfile import which`n        git = which(`"git`") or `"git`"`n`n    topsrcdir = command_context.substs.get"
+        Set-Content -Path $artifactCmdsPy -Value $content -Encoding ascii -Force
+        Write-Host "[OK] Patched artifact_commands.py with git fallback"
+    }
+}
+
 $machPath = Join-Path $enginePath "mach"
 if (Test-Path $machPath) {
     Write-Host "[SUCCESS] Mach entrypoint verified at $machPath"

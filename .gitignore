@@ -4,7 +4,7 @@ objdir*/
 node_modules/
 
 # Upstream engine source (managed by scripts, not committed directly)
-engine/*
+engine/
 !engine/mozconfig.nuclear
 mozilla-source/
 .mozbuild/

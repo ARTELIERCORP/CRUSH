@@ -64,12 +64,10 @@ if ($Clobber) {
     Set-Location $workspaceRoot
 }
 
-Write-Host "[*] Pre-installing binary artifact package from $env:MOZ_ARTIFACT_FILE..."
-Set-Location $enginePath
-& $pythonExe $machScript artifact install "$env:MOZ_ARTIFACT_FILE"
-
 Write-Host "[*] Executing artifact build via mach in $enginePath..."
 $buildTimer = [System.Diagnostics.Stopwatch]::StartNew()
+
+Set-Location $enginePath
 
 & $pythonExe $machScript build
 $exitCode = $LASTEXITCODE
