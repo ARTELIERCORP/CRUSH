@@ -626,3 +626,14 @@
   - Use `start-shell.bat` directly via `cmd.exe` rather than nested PowerShell invocation to match MozillaBuild's supported execution model.
   - Add `MSYS2_PATH_TYPE=inherit` so tools installed by GitHub Actions (`sccache`, `python`, `rustc`) are available inside the MSYS2 environment.
 - **Follow-ups**: Trigger workflow run #3 on GitHub Actions.
+
+## 2026-10-06 — Bug Fix: MSYS2 Working Directory Reset in Cloud Mach Build
+- **Task**: Fix `cd: engine: No such file or directory` failure (exit code 1) in GitHub Actions Run #3 under `Execute Full Source Mach Build`.
+- **Change**:
+  - Root cause diagnosis: When `C:\mozilla-build\start-shell.bat` is executed under `cmd.exe` without `-here` or `CHERE_INVOKING=1`, MSYS2 bash launches as a login shell (`-l`), sourcing `/etc/profile` and resetting the working directory to `/c/Users/runneradmin` (`$HOME`). Running `cd engine` failed because `engine` is located at `D:\a\CRUSH\CRUSH\engine`.
+  - Added `set CHERE_INVOKING=1`, `cd /d "%GITHUB_WORKSPACE%\engine"`, and passed `-here` to `start-shell.bat`.
+  - Invoked `./mach build` directly since MSYS2 bash starts directly inside `engine/`.
+- **Verification level**: Level L2 (Local reproduction and verification: verified `pwd` reset behavior locally without `-here`, verified that `CHERE_INVOKING=1` + `-here` starts in `.../crush/engine`, and verified `./mach help` executes cleanly with exit code 0).
+- **Fix class**: ROOT-CAUSE. Enforces MSYS2 working directory retention across drive boundaries (`D:`) via native `CHERE_INVOKING=1` and `-here` parameters.
+- **Decisions**: CD directly into `%GITHUB_WORKSPACE%\engine` before invoking `start-shell.bat -here` so the shell environment never attempts relative navigation.
+- **Follow-ups**: Commit, push to `master` and `main`, and re-trigger workflow.

@@ -90,8 +90,10 @@ jobs:
           set DISABLE_TELEMETRY=1
           set MOZ_AUTOMATION=1
           set MSYS2_PATH_TYPE=inherit
+          set CHERE_INVOKING=1
           set SCCACHE_DIR=%USERPROFILE%\.sccache
-          call C:\mozilla-build\start-shell.bat -no-start -defterm -c "cd engine && ./mach build"
+          cd /d "%GITHUB_WORKSPACE%\engine"
+          call C:\mozilla-build\start-shell.bat -no-start -defterm -here -c "./mach build"
 
       - name: Package Nuclear Release Bundle
         id: package
