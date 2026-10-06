@@ -45,10 +45,11 @@ $mozconfigPath = Join-Path $enginePath "mozconfig"
 $mozconfigContent = @"
 # Crush Browser artifact build configuration
 ac_add_options --enable-artifact-builds
+ac_add_options --disable-tests
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/objdir-crush
 "@
 
-Set-Content -Path $mozconfigPath -Value $mozconfigContent -Encoding utf8 -Force
+Set-Content -Path $mozconfigPath -Value $mozconfigContent -Encoding ascii -Force
 Write-Host "[OK] Written artifact build mozconfig to $mozconfigPath"
 
 # Ensure target.zip is available for artifact builds
@@ -74,7 +75,7 @@ is_enabled = False
 is_set_up = True
 [build]
 telemetry = false
-"@ | Set-Content -Path $machrcPath -Encoding utf8 -Force
+"@ | Set-Content -Path $machrcPath -Encoding ascii -Force
 
 $machPath = Join-Path $enginePath "mach"
 if (Test-Path $machPath) {

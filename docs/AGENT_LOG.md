@@ -671,3 +671,21 @@
 - **Fix class**: ROOT-CAUSE. Guarantees `target.zip` exists on disk before `mach build` runs and eliminates PowerShell debugger traps in `build.ps1`.
 - **Decisions**: Download `target.zip` directly via `curl.exe` from Taskcluster whenever not present in cache.
 - **Follow-ups**: Commit, push to `master` and `main`.
+
+## 2026-10-06 — Bug Fix: machrc UTF-8 BOM, MOZ_AUTOMATION VCS Requirement & Artifact Tests Bypass
+- **Task**: Fix `configparser.MissingSectionHeaderError: '\ufeff[mach_telemetry]\n'` failure in GitHub Actions Run #5 and unblock artifact release pipeline.
+- **Change**:
+  - Root cause diagnosis:
+    1. In Windows PowerShell 5.1 on GitHub Actions runners, `Set-Content -Encoding utf8` writes a 3-byte UTF-8 Byte Order Mark (`\xef\xbb\xbf` / `\ufeff`). Python's `configparser.read_file()` does not strip BOMs by default, reading `\ufeff[mach_telemetry]` instead of `[mach_telemetry]` and aborting with `MissingSectionHeaderError`.
+    2. Setting `MOZ_AUTOMATION=1` causes Gecko configure to mandate a Git/Hg checkout (`ERROR: unable to resolve VCS type; must run from a source checkout when MOZ_AUTOMATION is set`), which fails on source trees extracted from official release tarballs.
+    3. Artifact mozconfig lacked `ac_add_options --disable-tests`, causing make to seek test executables (`updater-xpcshell.exe`) that cannot be compiled in an artifact build.
+  - Replaced `-Encoding utf8` with `-Encoding ascii` for `machrc` and `mozconfig` in `scripts/sync-engine.ps1` and `scripts/build.ps1`.
+  - Cleared `MOZ_AUTOMATION` from the build environment in `scripts/build.ps1`.
+  - Added `ac_add_options --disable-tests` to `mozconfig` generation in `scripts/sync-engine.ps1`.
+- **Verification level**: Level L2 (Executed full artifact build via `scripts/build.ps1`: completed with exit code 0 in 45.8s; verified `machrc` parsed cleanly by Python `configparser` without exceptions).
+- **Fix class**: ROOT-CAUSE. Eliminated the PowerShell BOM injection at the source, cleared automation VCS assertions for tarball builds, and bypassed test binary compilation.
+- **Decisions**: Enforce `-Encoding ascii` for all INI and shell configuration files written via PowerShell.
+- **Rejected approaches**:
+  - Modifying in-tree Python `configparser` callers in `engine/`: Rejected because vendor code should remain clean and is overwritten on source extraction.
+- **Follow-ups**: Commit, push to `master` and `main`, and re-trigger `Crush Browser Release Pipeline`.
+
