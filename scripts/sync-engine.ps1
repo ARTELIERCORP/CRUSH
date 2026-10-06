@@ -51,6 +51,31 @@ mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/objdir-crush
 Set-Content -Path $mozconfigPath -Value $mozconfigContent -Encoding utf8 -Force
 Write-Host "[OK] Written artifact build mozconfig to $mozconfigPath"
 
+# Ensure target.zip is available for artifact builds
+$targetZip = Join-Path $env:TEMP "target.zip"
+if (-not (Test-Path $targetZip)) {
+    Write-Host "[*] Fetching Firefox $Version win64-opt artifact package (target.zip)..."
+    $artifactUrl = "https://firefoxci.taskcluster-artifacts.net/bd9WgLGgTzeNoMvHpBx2Wg/1/public/build/target.zip"
+    curl.exe -L -o $targetZip $artifactUrl
+    Write-Host "[OK] target.zip fetched to $targetZip"
+} else {
+    Write-Host "[OK] target.zip already cached at $targetZip"
+}
+
+# Ensure non-interactive machrc is written to prevent stdin prompts
+$machrcDir = Join-Path $env:USERPROFILE ".mozbuild"
+if (-not (Test-Path $machrcDir)) {
+    New-Item -ItemType Directory -Path $machrcDir -Force | Out-Null
+}
+$machrcPath = Join-Path $machrcDir "machrc"
+@"
+[mach_telemetry]
+is_enabled = False
+is_set_up = True
+[build]
+telemetry = false
+"@ | Set-Content -Path $machrcPath -Encoding utf8 -Force
+
 $machPath = Join-Path $enginePath "mach"
 if (Test-Path $machPath) {
     Write-Host "[SUCCESS] Mach entrypoint verified at $machPath"
@@ -59,3 +84,4 @@ if (Test-Path $machPath) {
     Write-Error "Mach entrypoint missing at $machPath"
     exit 1
 }
+

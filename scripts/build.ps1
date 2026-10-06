@@ -21,30 +21,32 @@ $env:MACH_PS1_USE_MOZILLABUILD = "1"
 $env:USE_MINTTY = "0"
 $env:MSYS2_PATH_TYPE = "inherit"
 $env:DISABLE_TELEMETRY = "1"
+$env:MOZ_AUTOMATION = "1"
 $env:MOZ_ARTIFACT_FILE = "$env:TEMP\target.zip"
+
+if (-not (Test-Path $env:MOZ_ARTIFACT_FILE)) {
+    Write-Host "[*] target.zip missing from TEMP. Downloading official Taskcluster artifact..."
+    $artifactUrl = "https://firefoxci.taskcluster-artifacts.net/bd9WgLGgTzeNoMvHpBx2Wg/1/public/build/target.zip"
+    curl.exe -L -o $env:MOZ_ARTIFACT_FILE $artifactUrl
+}
 
 $pythonExe = Join-Path $env:MOZILLABUILD "python3\python3.exe"
 $machScript = Join-Path $enginePath "mach"
 
 if ($Clobber) {
     Write-Host "[*] Clobbering previous build..."
-    Push-Location $enginePath
-    try {
-        & $pythonExe $machScript clobber
-    } finally {
-        Pop-Location
-    }
+    Set-Location $enginePath
+    & $pythonExe $machScript clobber
+    Set-Location $workspaceRoot
 }
 
 Write-Host "[*] Executing artifact build via mach in $enginePath..."
 $buildTimer = [System.Diagnostics.Stopwatch]::StartNew()
 
-Push-Location $enginePath
-try {
-    & $pythonExe $machScript build
-} finally {
-    Pop-Location
-}
+Set-Location $enginePath
+& $pythonExe $machScript build
+$exitCode = $LASTEXITCODE
+Set-Location $workspaceRoot
 
 $buildTimer.Stop()
 $exitCode = $LASTEXITCODE

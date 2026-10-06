@@ -654,3 +654,20 @@
 - **Fix class**: ROOT-CAUSE. Replaced hallucinated configure flags with verified in-tree options supported by Gecko 157.
 - **Decisions**: Strip non-existent configure options so the build system never aborts before compilation.
 - **Follow-ups**: Commit, push to `master` and `main`, and inform user.
+
+## 2026-10-06 — Bug Fix: Artifact Build Hang & Missing target.zip in CI Pipeline
+- **Task**: Diagnose and fix `Execute Artifact Build` hang (sitting at `Creating the 'build' site` for 15+ minutes) in `build-release.yml` run #4.
+- **Change**:
+  - Root cause diagnosis:
+    1. `build-release.yml` assumed `$env:TEMP\target.zip` was in the actions cache, but on fresh runs/cache misses, `target.zip` was never downloaded.
+    2. When `MOZ_ARTIFACT_FILE` points to a missing file on a tree without git history, `mach artifact` hangs attempting to resolve revisions against Taskcluster.
+    3. `scripts/build.ps1` used `try { ... } finally { Pop-Location }`, which triggers PowerShell's interactive debugger prompt on unhandled child process exit codes.
+    4. `MOZ_AUTOMATION=1` was not set, allowing potential interactive prompts during virtualenv bootstrap.
+  - Added automated fallback download of official Taskcluster `target.zip` in both `scripts/sync-engine.ps1` and `scripts/build.ps1`.
+  - Added non-interactive `~/.mozbuild/machrc` generation in `scripts/sync-engine.ps1` to permanently suppress telemetry prompts.
+  - Replaced `try/finally` blocks in `scripts/build.ps1` with direct `Set-Location` navigation.
+  - Set `$env:MOZ_AUTOMATION = "1"` in `scripts/build.ps1`.
+- **Verification level**: Level L2 (Executed local artifact build with `target.zip` present: completed in 16.0s with exit code 0; verified `mach` virtualenv and automation backend completed cleanly).
+- **Fix class**: ROOT-CAUSE. Guarantees `target.zip` exists on disk before `mach build` runs and eliminates PowerShell debugger traps in `build.ps1`.
+- **Decisions**: Download `target.zip` directly via `curl.exe` from Taskcluster whenever not present in cache.
+- **Follow-ups**: Commit, push to `master` and `main`.
